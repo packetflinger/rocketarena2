@@ -190,7 +190,16 @@ void ClientEndServerFrames (void)
 	for (i=0 ; i<maxclients->value ; i++)
 	{
 		ent = g_edicts + 1 + i;
-		if (!ent->inuse || !ent->client)
+		if (!ent->inuse || !ent->client || eyecam_active (ent))
+			continue;
+		ClientEndServerFrame (ent);
+	}
+
+	// in-eyes spectators copy their target's finished view, so do them last
+	for (i=0 ; i<maxclients->value ; i++)
+	{
+		ent = g_edicts + 1 + i;
+		if (!ent->inuse || !ent->client || !eyecam_active (ent))
 			continue;
 		ClientEndServerFrame (ent);
 	}

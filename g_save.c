@@ -137,6 +137,7 @@ is loaded.
 void InitGame (void)
 {
 	cvar_t	*public;
+	cvar_t	*sv_features;
 	int		i;
 
 	gi.dprintf ("==== InitGame %s====\n", GAMEVERSION);
@@ -205,6 +206,13 @@ void InitGame (void)
 
 	// dm map list
 	sv_maplist = gi.cvar ("sv_maplist", "", 0);
+
+	// game/server feature support - export what we support and
+	// read what the server supports
+	gi.cvar ("g_features", "0", CVAR_NOSET);
+	gi.cvar_forceset ("g_features", va ("%d", GMF_CLIENTNUM));
+	sv_features = gi.cvar ("sv_features", NULL, 0);
+	game.server_features = sv_features ? (int)sv_features->value : 0;
 
 	// items
 	InitItems ();

@@ -557,6 +557,111 @@ void eyecam_think (edict_t *ent, usercmd_t *ucmd)
 	track_SetStats (ent);
 }
 
+/*
+ * True when ent is a spectator watching a live player through their eyes.
+ */
+qboolean eyecam_active (edict_t *ent)
+{
+	edict_t	*target;
+
+	if (ent->client->resp.fightstate != FIGHT_SPECTATING ||
+		ent->client->resp.omode != EYECAM)
+		return false;
+
+	target = ent->client->resp.track_target;
+	return target && target->inuse && target->client &&
+		target->client->resp.fightstate == FIGHT_ALIVE;
+}
+
+/*
+ * Called from ClientEndServerFrame after the target's own view has been
+ * calculated for this frame. Mirrors the target's view (eye position,
+ * angles, kick, gun model and screen blend) onto the spectator.
+ *
+ * On servers that support GMF_CLIENTNUM the target's entity is hidden from
+ * the spectator by setting clientNum, so the camera can sit exactly in the
+ * target's eyes. Older servers would draw the target's model around the
+ * camera, so the camera is pushed out in front of their face instead.
+ */
+void eyecam_SetView (edict_t *ent)
+{
+	gclient_t	*client = ent->client;
+	gclient_t	*tclient;
+	edict_t		*target;
+	vec3_t		eye, goal, forward, delta;
+	trace_t		tr;
+	int			i;
+
+	if (!eyecam_active (ent))
+	{
+		// leaving in-eyes: give the spectator their own gun back
+		if (client->eyecam_view)
+		{
+			client->eyecam_view = false;
+			VectorClear (client->ps.kick_angles);
+			VectorClear (client->ps.gunangles);
+			VectorClear (client->ps.gunoffset);
+			client->ps.gunframe = 0;
+			if (client->pers.weapon)
+			{
+				client->weaponstate = WEAPON_ACTIVATING;
+				client->ps.gunindex = gi.modelindex (client->pers.weapon->view_model);
+			}
+			else
+				client->ps.gunindex = 0;
+		}
+		return;
+	}
+
+	target = client->resp.track_target;
+	tclient = target->client;
+	client->eyecam_view = true;
+
+	VectorAdd (target->s.origin, tclient->ps.viewoffset, eye);
+	VectorCopy (eye, goal);
+
+	if (game.server_features & GMF_CLIENTNUM)
+		client->clientNum = target - g_edicts - 1;
+	else
+	{
+		AngleVectors (tclient->v_angle, forward, NULL, NULL);
+		VectorMA (eye, 30, forward, goal);
+
+		// don't poke the camera through walls
+		tr = gi.trace (eye, vec3_origin, vec3_origin, goal, target, MASK_SOLID);
+		if (tr.fraction < 1)
+		{
+			VectorSubtract (tr.endpos, eye, delta);
+			VectorMA (eye, 0.9f, delta, goal);
+		}
+	}
+
+	// the client adds viewoffset to the origin, so back it out
+	VectorSubtract (goal, tclient->ps.viewoffset, ent->s.origin);
+	VectorClear (ent->velocity);
+	gi.linkentity (ent);
+
+	for (i = 0; i < 3; i++)
+	{
+		client->ps.pmove.origin[i] = ent->s.origin[i] * 8;
+		client->ps.pmove.velocity[i] = 0;
+	}
+	client->ps.pmove.pm_flags |= PMF_NO_PREDICTION;
+
+	VectorCopy (tclient->ps.viewoffset, client->ps.viewoffset);
+	VectorCopy (tclient->ps.viewangles, client->ps.viewangles);
+	VectorCopy (tclient->ps.kick_angles, client->ps.kick_angles);
+
+	client->ps.gunindex = tclient->ps.gunindex;
+	client->ps.gunframe = tclient->ps.gunframe;
+	VectorCopy (tclient->ps.gunangles, client->ps.gunangles);
+	VectorCopy (tclient->ps.gunoffset, client->ps.gunoffset);
+
+	for (i = 0; i < 4; i++)
+		client->ps.blend[i] = tclient->ps.blend[i];
+	client->ps.rdflags = tclient->ps.rdflags;
+}
+
 /* gamex86.dll 0x20001e10-0x200020c4 (manual-confirmed) */
 /* gamei386.so 0x00048c74-0x00048fbb */
 void track_think (edict_t *ent, usercmd_t *ucmd)

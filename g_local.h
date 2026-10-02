@@ -37,6 +37,9 @@
 #define	SPAWNFLAG_NOT_COOP			0x00001000
 
 // edict->flags
+// game/server feature negotiation (g_features / sv_features cvars)
+#define	GMF_CLIENTNUM			0x00000001	// game sets clientNum gclient_s field
+
 #define	FL_FLY					0x00000001
 #define	FL_SWIM					0x00000002	// implied immunity to drowining
 #define FL_IMMUNE_LASER			0x00000004
@@ -275,6 +278,8 @@ typedef struct
 	int			num_items;
 
 	qboolean	autosaved;
+
+	int			server_features;	// GMF_* bits the server supports
 } game_locals_t;
 
 
@@ -901,6 +906,7 @@ struct gclient_s
 	// known to server
 	player_state_t	ps;				// communicated by server to clients
 	int				ping;
+	int				clientNum;		// POV entity for GMF_CLIENTNUM servers
 
 	// private to game
 	client_persistant_t	pers;
@@ -997,6 +1003,8 @@ struct gclient_s
 
 	edict_t		*chase_target;		// player we are chasing
 	qboolean	update_chase;		// need to update chase info?
+
+	qboolean	eyecam_view;		// ps currently mirrors an in-eyes target
 };
 
 

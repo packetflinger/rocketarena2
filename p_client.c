@@ -1173,6 +1173,7 @@ void PutClientInServer (edict_t *ent)
 	saved = client->pers;
 	memset (client, 0, sizeof(*client));
 	client->pers = saved;
+	client->clientNum = index;
 	if (client->pers.health <= 0)
 		InitClientPersistant(client);
 	client->resp = resp;

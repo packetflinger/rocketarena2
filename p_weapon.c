@@ -274,6 +274,10 @@ Called by ClientBeginServerFrame and ClientThink
 /* gamei386.so 0x00043d5c-0x00043e35 */
 void Think_Weapon (edict_t *ent)
 {
+	// in-eyes spectators show their target's gun instead of their own
+	if (eyecam_active (ent))
+		return;
+
 	// if just died, put the weapon away
 	if (ent->health < 1)
 	{
