@@ -124,7 +124,9 @@ void *BucketNew (bucketset_t *set, char *key, buckettype_t type, void *value)
 	assert (set);
 	entry.key = _strdup (key);
 	entry.type = type;
-	entry.value.ival = 0;
+	// clear the whole union: on 64-bit, sval is wider than ival and
+	// DoSet would free() the uninitialized upper half
+	memset (&entry.value, 0, sizeof(entry.value));
 	entry.samples = 1;
 	DoSet (&entry, value);
 	TableEnter (set->buckets, &entry);
@@ -280,8 +282,17 @@ static void DumpMap (void *entry, void *userdata)
 			out->size = out->size * 2;
 		out->buf = realloc (out->buf, out->size);
 	}
-	out->len += sprintf (out->buf + out->len, formatspec[b->type],
-		b->key, b->value.ival);
+	// pass the union member matching the format; the original passed ival
+	// for every type, which only worked on 32-bit
+	if (b->type == bt_float)
+		out->len += sprintf (out->buf + out->len, formatspec[b->type],
+			b->key, b->value.dval);
+	else if (b->type == bt_string)
+		out->len += sprintf (out->buf + out->len, formatspec[b->type],
+			b->key, b->value.sval);
+	else
+		out->len += sprintf (out->buf + out->len, formatspec[b->type],
+			b->key, b->value.ival);
 }
 /* gamex86.dll 0x2001afc0-0x2001afe0 (manual-confirmed) */
 /* gamei386.so: no symbol -- inlined into its callers */
