@@ -541,7 +541,7 @@ static void CheckDiskFile (void)
 
 	mode[0] = 'r';
 	mode[1] = 'b';
-	mode[3] = 0;
+	mode[2] = 0;
 
 	f = fopen (statsfile, mode);
 	if (!f)
@@ -613,7 +613,7 @@ static void DiskWrite (char *payload, int len)
 
 	mode[0] = 'a';
 	mode[1] = 'b';
-	mode[3] = 0;
+	mode[2] = 0;
 
 	f = fopen (statsfile, mode);
 	if (!f)
@@ -653,14 +653,14 @@ static void xcode_buf (char *buf, int len)
 /* gamei386.so 0x00057284-0x0005730d */
 static unsigned long g_crc32 (unsigned char *buf, int len)
 {
-	long	hash;
-	int		n;
+	unsigned long	hash;
+	int				n;
 
 	hash = 0;
 	for (n = 0; n < len; n++)
-		hash = hash * 0x9CCF9319L + (long)(signed char)buf[n];
+		hash = hash * 0x9CCF9319UL + (long)(signed char)buf[n];
 
-	return (unsigned long)hash;
+	return hash;
 }
 
 /* gamex86.dll 0x2001c5e0-0x2001c612 (manual-confirmed) */
@@ -726,8 +726,8 @@ static int get_sockaddrin (char *host, int port, struct sockaddr_in *addr, void 
 		if (!result)
 			return 0;
 
-		addr->sin_addr.s_addr =
-			*(unsigned long *)((struct hostent *)result)->h_addr_list[0];
+		memcpy (&addr->sin_addr, ((struct hostent *)result)->h_addr_list[0],
+			sizeof(addr->sin_addr));
 	}
 
 	if (out)

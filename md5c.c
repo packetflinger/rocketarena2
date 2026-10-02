@@ -28,7 +28,7 @@ documentation and/or software.
 
 typedef unsigned char *POINTER;
 typedef unsigned short UINT2;
-typedef unsigned long UINT4;
+typedef unsigned int UINT4;
 
 /* Constants for MD5Transform routine.
  */
@@ -101,8 +101,7 @@ Rotation is separate from addition to prevent recomputation.
  */
 /* gamex86.dll 0x2001e560-0x2001e590 (call-propagated+collision-resolved) */
 /* gamei386.so 0x000579cc-0x000579fa */
-void MD5Init (context)
-MD5_CTX *context;                                        /* context */
+void MD5Init (MD5_CTX *context)
 {
 	context->count[0] = context->count[1] = 0;
 	/* Load magic initialization constants.
@@ -119,10 +118,7 @@ MD5_CTX *context;                                        /* context */
  */
 /* gamex86.dll 0x2001e590-0x2001e640 (shape-matched(ratio=1.00)) */
 /* gamei386.so 0x000579fc-0x00057a95 */
-void MD5Update (context, input, inputLen)
-MD5_CTX *context;                                        /* context */
-unsigned char *input;                                /* input block */
-unsigned int inputLen;                     /* length of input block */
+void MD5Update (MD5_CTX *context, unsigned char *input, unsigned int inputLen)
 {
 	unsigned int i, index, partLen;
 
@@ -163,9 +159,7 @@ unsigned int inputLen;                     /* length of input block */
  */
 /* gamex86.dll 0x2001e640-0x2001e6b0 (shape-matched(ratio=1.00)) */
 /* gamei386.so 0x00057a98-0x00057c0d */
-void MD5Final (digest, context)
-unsigned char digest[16];                         /* message digest */
-MD5_CTX *context;                                       /* context */
+void MD5Final (unsigned char digest[16], MD5_CTX *context)
 {
 	unsigned char bits[8];
 	unsigned int index, padLen;
@@ -194,9 +188,7 @@ MD5_CTX *context;                                       /* context */
  */
 /* gamex86.dll 0x2001e6b0-0x2001f000 (shape-matched(ratio=1.00)) */
 /* gamei386.so 0x00057c10-0x000585a7 */
-static void MD5Transform (state, block)
-UINT4 state[4];
-unsigned char block[64];
+static void MD5Transform (UINT4 state[4], unsigned char block[64])
 {
 	UINT4 a = state[0], b = state[1], c = state[2], d = state[3], x[16];
 
@@ -289,10 +281,7 @@ unsigned char block[64];
  */
 /* gamex86.dll 0x2001f000-0x2001f050 (call-propagated+collision-resolved) */
 /* gamei386.so 0x000585a8-0x00058737 */
-static void Encode (output, input, len)
-unsigned char *output;
-UINT4 *input;
-unsigned int len;
+static void Encode (unsigned char *output, UINT4 *input, unsigned int len)
 {
 	unsigned int i, j;
 
@@ -309,10 +298,7 @@ unsigned int len;
  */
 /* gamex86.dll 0x2001f050-0x2001f0a0 (call-propagated+collision-resolved) */
 /* gamei386.so 0x00058738-0x000588d9 */
-static void Decode (output, input, len)
-UINT4 *output;
-unsigned char *input;
-unsigned int len;
+static void Decode (UINT4 *output, unsigned char *input, unsigned int len)
 {
 	unsigned int i, j;
 
@@ -326,10 +312,7 @@ unsigned int len;
 
 /* gamex86.dll 0x2001f0a0-0x2001f0c0 (shape-matched(ratio=1.00)) */
 /* gamei386.so 0x000588dc-0x000588f4 */
-static void MD5_memcpy (output, input, len)
-POINTER output;
-POINTER input;
-unsigned int len;
+static void MD5_memcpy (POINTER output, POINTER input, unsigned int len)
 {
 	memcpy (output, input, len);
 }
@@ -338,10 +321,7 @@ unsigned int len;
  */
 /* gamex86.dll 0x2001f0c0-0x2001f0f0 (call-propagated+collision-resolved) */
 /* gamei386.so 0x000588f4-0x0005890c */
-static void MD5_memset (output, value, len)
-POINTER output;
-int value;
-unsigned int len;
+static void MD5_memset (POINTER output, int value, unsigned int len)
 {
 	memset (output, value, len);
 }

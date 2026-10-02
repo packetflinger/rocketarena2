@@ -235,15 +235,15 @@ void give_ammo (edict_t *e)
 	}
 
 	// give ammo
-	if (it = FindItemByClassname ("ammo_shells")) e->client->pers.inventory[ITEM_INDEX(it)] = arena->shells;
-	if (it = FindItemByClassname ("ammo_bullets")) e->client->pers.inventory[ITEM_INDEX(it)] = arena->bullets;
-	if (it = FindItemByClassname ("ammo_slugs")) e->client->pers.inventory[ITEM_INDEX(it)] = arena->slugs;
-	if (it = FindItemByClassname ("ammo_grenades")) e->client->pers.inventory[ITEM_INDEX(it)] = arena->grenades;
-	if (it = FindItemByClassname ("ammo_rockets")) e->client->pers.inventory[ITEM_INDEX(it)] = arena->rockets;
-	if (it = FindItemByClassname ("ammo_cells")) e->client->pers.inventory[ITEM_INDEX(it)] = arena->cells;
+	if ((it = FindItemByClassname ("ammo_shells"))) e->client->pers.inventory[ITEM_INDEX(it)] = arena->shells;
+	if ((it = FindItemByClassname ("ammo_bullets"))) e->client->pers.inventory[ITEM_INDEX(it)] = arena->bullets;
+	if ((it = FindItemByClassname ("ammo_slugs"))) e->client->pers.inventory[ITEM_INDEX(it)] = arena->slugs;
+	if ((it = FindItemByClassname ("ammo_grenades"))) e->client->pers.inventory[ITEM_INDEX(it)] = arena->grenades;
+	if ((it = FindItemByClassname ("ammo_rockets"))) e->client->pers.inventory[ITEM_INDEX(it)] = arena->rockets;
+	if ((it = FindItemByClassname ("ammo_cells"))) e->client->pers.inventory[ITEM_INDEX(it)] = arena->cells;
 
 	// give body armor
-	if (it = FindItemByClassname ("item_armor_body"))
+	if ((it = FindItemByClassname ("item_armor_body")))
 		e->client->pers.inventory[ITEM_INDEX(it)] = arena->armor;
 
 	if (allow_grapple)

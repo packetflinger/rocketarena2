@@ -1,7 +1,7 @@
 typedef struct
 {
-	unsigned long	state[4];
-	unsigned long	count[2];
+	unsigned int	state[4];
+	unsigned int	count[2];
 	unsigned char	buffer[64];
 } MD5_CTX;
 

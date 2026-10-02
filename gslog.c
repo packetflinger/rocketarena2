@@ -17,6 +17,7 @@ struct sockaddr_in net_name_to_address (char *name)
 	struct sockaddr_in	sin;
 	struct hostent		*hp;
 	char			*s, *portstr;
+	int			port;
 	unsigned long		a;
 
 	memset (&sin, 0, sizeof(sin));
@@ -27,12 +28,13 @@ struct sockaddr_in net_name_to_address (char *name)
 
 	if (portstr)
 	{
-		sin.sin_port = atoi (portstr);
-		if (sin.sin_port <= 0 || sin.sin_port >= 65536)
+		port = atoi (portstr);
+		if (port <= 0 || port >= 65536)
 		{
 			fprintf (stderr, "net_name_to_address: %s: invalid port number\n", portstr);
 			exit (1);
 		}
+		sin.sin_port = port;
 	}
 	else
 		sin.sin_port = 0;
@@ -42,7 +44,7 @@ struct sockaddr_in net_name_to_address (char *name)
 	{
 		hp = gethostbyname (s);
 		if (hp)
-			sin.sin_addr.s_addr = *(unsigned long *)hp->h_addr_list[0];
+			memcpy (&sin.sin_addr, hp->h_addr_list[0], sizeof(sin.sin_addr));
 		else
 		{
 #ifdef _WIN32
@@ -220,7 +222,7 @@ void GSLogNewmap (void)
 /* gamei386.so 0x00054750-0x0005477c */
 void GSdodeathlog (char *line)
 {
-	fprintf (StdLogFile, line);
+	fprintf (StdLogFile, "%s", line);
 
 	if (netlog->string[0])
 		GSSendLine (line);
