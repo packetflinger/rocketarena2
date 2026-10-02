@@ -1,25 +1,69 @@
-BUILD_DEBUG_DIR=debug
-BUILD_RELEASE_DIR=release
+# Native builds target the host OS (Linux or macOS) and, by default, the
+# host CPU. ARCH names the CPU in the output filename, game$(ARCH).$(SHLIBEXT),
+# using the names Quake 2 engines look for: i386, x86_64, aarch64.
+#
+#   make                  host arch, e.g. gamex86_64.so / gameaarch64.dylib
+#   make ARCH=i386        the original's 32-bit gamei386.so; on an x86_64
+#                         Linux host this needs a multilib toolchain
+#                         (gcc-multilib/libc6-dev-i386 or equivalent)
+#   make ARCH=x86_64      on an Apple Silicon Mac, an Intel/Rosetta build
+#
+# Some engines (e.g. Yamagi Quake II) load a plain game.so / game.dylib
+# instead, so rename the output for those.
+OS:=$(shell uname -s)
+HOST_ARCH:=$(shell uname -m | sed -e 's/^i.86$$/i386/' -e 's/^amd64$$/x86_64/' \
+	-e 's/^arm64$$/aarch64/')
+ARCH?=$(HOST_ARCH)
+
+ifeq ($(OS),Darwin)
+OSNAME=macos
+SHLIBEXT=dylib
+# Apple clang cross-compiles between its architectures with -arch,
+# which spells aarch64 as arm64.
+ARCH_FLAGS?=-arch $(subst aarch64,arm64,$(ARCH))
+PLATFORM_LDFLAGS=
+ifeq ($(origin CC),default)
+CC=cc
+endif
+else
+OSNAME=linux
+SHLIBEXT=so
+ifneq ($(ARCH),$(HOST_ARCH))
+ifeq ($(ARCH),i386)
+ARCH_FLAGS?=-m32
+endif
+ifeq ($(ARCH),x86_64)
+ARCH_FLAGS?=-m64
+endif
+endif
+ARCH_FLAGS?=
+# dlopen's home before glibc 2.34; harmless (an empty stub) after.
+PLATFORM_LDFLAGS=-ldl
+ifeq ($(origin CC),default)
+CC=gcc
+endif
+endif
+
+BUILD_DEBUG_DIR=debug-$(OSNAME)-$(ARCH)
+BUILD_RELEASE_DIR=release-$(OSNAME)-$(ARCH)
 BUILD_WIN32_DEBUG_DIR=debug-win32
 BUILD_WIN32_RELEASE_DIR=release-win32
 BUILD_WIN64_DEBUG_DIR=debug-win64
 BUILD_WIN64_RELEASE_DIR=release-win64
 
-# The real gamei386.so was a 32-bit build. Set M32=-m32 once a 32-bit
-# multilib toolchain (gcc-multilib/libc6-dev-i386 or equivalent) is
-# available to build a period-correct target; native (64-bit) is used
-# by default since that's what actually links in this environment.
-ARCH?=x86
-M32?=
+# -fexpensive-optimizations is GCC-only; clang (the default cc on macOS,
+# and an option on Linux) warns about it on every file.
+ifeq ($(shell $(CC) --version 2>/dev/null | grep -c clang),0)
+GCC_ONLY_CFLAGS=-fexpensive-optimizations
+else
+GCC_ONLY_CFLAGS=
+endif
 
-CC=gcc
-BASE_CFLAGS=-Dstricmp=strcasecmp $(M32)
+BASE_CFLAGS=-Dstricmp=strcasecmp $(ARCH_FLAGS)
 RELEASE_CFLAGS=$(BASE_CFLAGS) -ffast-math -funroll-loops \
-	-fomit-frame-pointer -fexpensive-optimizations
+	-fomit-frame-pointer $(GCC_ONLY_CFLAGS)
 DEBUG_CFLAGS=$(BASE_CFLAGS) -g
-LDFLAGS=-ldl -lm $(M32)
-
-SHLIBEXT=so
+LDFLAGS=$(PLATFORM_LDFLAGS) -lm $(ARCH_FLAGS)
 
 SHLIBCFLAGS=-fPIC
 SHLIBLDFLAGS=-shared
@@ -58,33 +102,33 @@ DO_SHLIB_CC=$(CC) $(CFLAGS) $(SHLIBCFLAGS) -o $@ -c $<
 TARGETS=$(BUILDDIR)/game$(ARCH).$(SHLIBEXT) \
 
 build_debug:
-	@-mkdir $(BUILD_DEBUG_DIR)
+	@mkdir -p $(BUILD_DEBUG_DIR)
 	$(MAKE) targets BUILDDIR=$(BUILD_DEBUG_DIR) CFLAGS="$(DEBUG_CFLAGS)"
 
 build_release:
-	@-mkdir $(BUILD_RELEASE_DIR)
+	@mkdir -p $(BUILD_RELEASE_DIR)
 	$(MAKE) targets BUILDDIR=$(BUILD_RELEASE_DIR) CFLAGS="$(RELEASE_CFLAGS)"
 
 build_win32_debug:
-	@-mkdir $(BUILD_WIN32_DEBUG_DIR)
+	@mkdir -p $(BUILD_WIN32_DEBUG_DIR)
 	$(MAKE) targets BUILDDIR=$(BUILD_WIN32_DEBUG_DIR) CFLAGS="$(WIN_DEBUG_CFLAGS)" \
 		CC=$(CC_WIN32) ARCH=x86 SHLIBEXT=dll SHLIBCFLAGS="$(WIN_SHLIBCFLAGS)" LDFLAGS="$(WIN_LDFLAGS)" \
 		EXTRA_LINK_INPUTS="$(WIN_EXTRA_LINK_INPUTS)"
 
 build_win32_release:
-	@-mkdir $(BUILD_WIN32_RELEASE_DIR)
+	@mkdir -p $(BUILD_WIN32_RELEASE_DIR)
 	$(MAKE) targets BUILDDIR=$(BUILD_WIN32_RELEASE_DIR) CFLAGS="$(WIN_RELEASE_CFLAGS)" \
 		CC=$(CC_WIN32) ARCH=x86 SHLIBEXT=dll SHLIBCFLAGS="$(WIN_SHLIBCFLAGS)" LDFLAGS="$(WIN_LDFLAGS)" \
 		EXTRA_LINK_INPUTS="$(WIN_EXTRA_LINK_INPUTS)"
 
 build_win64_debug:
-	@-mkdir $(BUILD_WIN64_DEBUG_DIR)
+	@mkdir -p $(BUILD_WIN64_DEBUG_DIR)
 	$(MAKE) targets BUILDDIR=$(BUILD_WIN64_DEBUG_DIR) CFLAGS="$(WIN_DEBUG_CFLAGS)" \
 		CC=$(CC_WIN64) ARCH=x64 SHLIBEXT=dll SHLIBCFLAGS="$(WIN_SHLIBCFLAGS)" LDFLAGS="$(WIN_LDFLAGS)" \
 		EXTRA_LINK_INPUTS="$(WIN_EXTRA_LINK_INPUTS)"
 
 build_win64_release:
-	@-mkdir $(BUILD_WIN64_RELEASE_DIR)
+	@mkdir -p $(BUILD_WIN64_RELEASE_DIR)
 	$(MAKE) targets BUILDDIR=$(BUILD_WIN64_RELEASE_DIR) CFLAGS="$(WIN_RELEASE_CFLAGS)" \
 		CC=$(CC_WIN64) ARCH=x64 SHLIBEXT=dll SHLIBCFLAGS="$(WIN_SHLIBCFLAGS)" LDFLAGS="$(WIN_LDFLAGS)" \
 		EXTRA_LINK_INPUTS="$(WIN_EXTRA_LINK_INPUTS)"
