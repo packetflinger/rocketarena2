@@ -1484,6 +1484,52 @@ void show_countdown (int countdown, int arenanum)
 	}
 }
 
+/*
+ * Whole seconds left in the current fight, rounded up so the clock
+ * reads 0:00 only once time has actually run out.
+ */
+int round_time_left (int arenanum)
+{
+	arena_t	*arena = &arenas[arenanum];
+	int		frames;
+
+	// 10Hz server frames
+	frames = arena->roundtimelimit * 10 - (level.framenum - arena->roundstart_framenum);
+	if (frames <= 0)
+		return 0;
+
+	return (frames + 9) / 10;
+}
+
+/*
+ * Sends the time remaining in the current fight to everyone in the arena,
+ * once per second (or immediately if force is set).
+ */
+void show_roundtime (int arenanum, qboolean force)
+{
+	arena_t	*arena = &arenas[arenanum];
+	edict_t	*e;
+	char	*s;
+	int		i, secs;
+
+	if (!arena->roundtimelimit)
+		return;
+
+	secs = round_time_left (arenanum);
+	if (!force && secs == arena->roundtime_sent)
+		return;
+	arena->roundtime_sent = secs;
+
+	s = va ("%2d:%02d", secs / 60, secs % 60);
+
+	for (i = 0; i < maxclients->value; i++)
+	{
+		e = &g_edicts[i + 1];
+		if (e->inuse && e->client && e->client->resp.context == arenanum)
+			send_configstring (e, CS_ROUNDTIME, s);
+	}
+}
+
 /* gamex86.dll 0x20003780-0x200037a0 (bracketed) */
 /* gamei386.so 0x0004aa64-0x0004aa75 */
 int show_rank (qmenu_t *node)
@@ -1610,6 +1656,59 @@ int fight_done (int arenanum)
 	}
 
 	return winner;
+}
+
+/*
+ * Decides a round that ran out of time: the team with the most combined
+ * health + armor among its living players wins. Returns -1 on a tie.
+ */
+int health_winner (int arenanum)
+{
+	qmenu_t		*tnode, *mnode;
+	edict_t		*e;
+	int			winner, best, total;
+	qboolean	tie;
+
+	winner = -1;
+	best = 0;
+	tie = false;
+
+	tnode = &arenas[arenanum].activeteams;
+
+	while (tnode->next)
+	{
+		tnode = tnode->next;
+
+		mnode = (qmenu_t *)tnode->it;
+		total = 0;
+
+		while (mnode->next)
+		{
+			mnode = mnode->next;
+			e = (edict_t *)mnode->it;
+
+			if (e->takedamage != DAMAGE_AIM || e->deadflag != DEAD_NO)
+				continue;
+
+			total += e->health;
+			if (ArmorIndex (e))
+				total += e->client->pers.inventory[ArmorIndex (e)];
+		}
+
+		if (total <= 0)
+			continue;
+
+		if (total > best)
+		{
+			best = total;
+			winner = ((team_t *)((qmenu_t *)tnode->it)->it)->teamnum;
+			tie = false;
+		}
+		else if (total == best)
+			tie = true;
+	}
+
+	return tie ? -1 : winner;
 }
 
 /* gamex86.dll: no real counterpart -- confirmed dead code */
@@ -1761,7 +1860,8 @@ void UpdateStatusBars (int arenanum)
 		}
 	}
 
-	strcpy (p, "if 20 xv 0 yb -58 stat_string 20 endif ");
+	strcpy (p, "if 20 xv 0 yb -58 stat_string 20 endif "
+		"if 26 xr -42 yt 28 stat_string 26 endif ");
 
 	for (n = 0; n < maxclients->value; n++)
 	{
@@ -2036,6 +2136,9 @@ void arena_think (int arenanum)
 
 			arena->state = ASTATE_FIGHTING;
 			set_damage (arenanum, DAMAGE_AIM);
+			arena->roundstart_framenum = level.framenum;
+			arena->timed_out = false;
+			show_roundtime (arenanum, true);
 			return;
 		}
 
@@ -2044,10 +2147,21 @@ void arena_think (int arenanum)
 	}
 	else if (arena->state == ASTATE_FIGHTING && !broken)
 	{
+		show_roundtime (arenanum, false);
 		UpdateStatusBars (arenanum);
 
 		if (fight_done (arenanum) <= -2)
-			return;
+		{
+			if (!arena->roundtimelimit || round_time_left (arenanum) > 0)
+				return;
+
+			// out of time: decide on health + armor now, and stop the
+			// fighting so the result can't change during the results pause
+			arena->timeout_winner = health_winner (arenanum);
+			arena->timed_out = true;
+			set_damage (arenanum, DAMAGE_NO);
+			show_stringc ("Time's up!", arenanum);
+		}
 
 		arena->state = ASTATE_RESULTS;
 		return;
@@ -2103,7 +2217,13 @@ void arena_think (int arenanum)
 	}
 	else if (arena->state == ASTATE_NEXTROUND)
 	{
-		winner = fight_done (arenanum);
+		if (arena->timed_out)
+		{
+			winner = arena->timeout_winner;
+			arena->timed_out = false;
+		}
+		else
+			winner = fight_done (arenanum);
 
 		if (winner == -1)
 		{

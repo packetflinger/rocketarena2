@@ -905,6 +905,18 @@ void G_SetStats (edict_t *ent)
 		ent->client->ps.stats[STAT_HELPICON] = 0;
 
 	//
+	// round timer, frozen at the final time until the next round starts
+	//
+	if (ent->client->resp.context &&
+		arenas[ent->client->resp.context].roundtimelimit &&
+		(arenas[ent->client->resp.context].state == ASTATE_FIGHTING ||
+		 arenas[ent->client->resp.context].state == ASTATE_RESULTS ||
+		 arenas[ent->client->resp.context].state == ASTATE_NEXTROUND))
+		ent->client->ps.stats[STAT_ROUNDTIME] = CS_ROUNDTIME;
+	else
+		ent->client->ps.stats[STAT_ROUNDTIME] = 0;
+
+	//
 	// join queue
 	//
 	if (!ent->client->resp.context)

@@ -55,6 +55,7 @@ int		fastswitch;
 int		armorprotect;
 int		healthprotect;
 int		fallingdamage;
+int		roundtimelimit;
 int		allow_voting_armor;
 int		allow_voting_health;
 int		allow_voting_minping;
@@ -232,6 +233,10 @@ void get_settings (definition_t *items, int count)
 	if (key)
 		fallingdamage = atoi (get_val (key->value2, 0));
 
+	key = find_key ("roundtimelimit", 1, items, count);
+	if (key)
+		roundtimelimit = atoi (get_val (key->value2, 0));
+
 	key = find_key ("allowvotingarmor", 1, items, count);
 	if (key)
 		allow_voting_armor = atoi (get_val (key->value2, 0));
@@ -360,6 +365,7 @@ void set_config (int first, int last)
 		armorprotect = 2;
 		healthprotect = 1;
 		fallingdamage = 1;
+		roundtimelimit = 180;
 		allow_voting_armor = 1;
 		allow_voting_health = 1;
 		allow_voting_minping = 1;
@@ -411,6 +417,7 @@ void set_config (int first, int last)
 		arenas[i].armorprotect = armorprotect;
 		arenas[i].healthprotect = healthprotect;
 		arenas[i].fallingdamage = fallingdamage;
+		arenas[i].roundtimelimit = roundtimelimit < 0 ? 0 : roundtimelimit;
 		arenas[i].allow_voting_armor = allow_voting_armor;
 		arenas[i].allow_voting_health = allow_voting_health;
 		arenas[i].allow_voting_minping = allow_voting_minping;

@@ -20,6 +20,11 @@
 
 #define	STAT_CTF_ID_VIEW		20
 
+#define	STAT_ROUNDTIME			26
+
+// per-client configstring holding the round time remaining
+#define	CS_ROUNDTIME			(game.num_items + 0x424)
+
 #define	MAX_STATUS_TEAMS		2
 #define	MAX_STATUS_MEMBERS		4
 
@@ -197,6 +202,12 @@ typedef struct arena_s
 	team_t		*pickupteam[2];
 
 	void		*statsptr;
+
+	int			roundtimelimit;		// seconds per round, 0 = no limit
+	int			roundstart_framenum;	// when the current fight began
+	int			roundtime_sent;			// last whole second sent to clients
+	qboolean	timed_out;				// round ended by the time limit
+	int			timeout_winner;			// teamnum, or -1 for a tie
 } arena_t;
 
 extern	int			votetries_setting;
@@ -268,6 +279,9 @@ void		stuffcmd (edict_t *ent, char *s);
 void		send_sound_to_arena (char *soundname, int context);
 void		send_configstring (edict_t *e, int index, char *string);
 void		show_countdown (int countdown, int arenanum);
+void		show_roundtime (int arenanum, qboolean force);
+int			round_time_left (int arenanum);
+int			health_winner (int arenanum);
 int		show_rank (qmenu_t *node);
 
 qboolean	check_for_teams (int arenanum);
