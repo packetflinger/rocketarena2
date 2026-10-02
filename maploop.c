@@ -365,7 +365,7 @@ void set_config (int first, int last)
 		armorprotect = 2;
 		healthprotect = 1;
 		fallingdamage = 1;
-		roundtimelimit = 180;
+		roundtimelimit = 0;
 		allow_voting_armor = 1;
 		allow_voting_health = 1;
 		allow_voting_minping = 1;
